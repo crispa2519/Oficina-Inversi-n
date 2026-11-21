@@ -1,0 +1,32 @@
+{
+  "name": "oficina-inversiones-ia",
+  "version": "1.0.0",
+  "description": "Oficina virtual 3D de asesoramiento de inversiones con agentes de IA (Claude)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crispa2519/Oficina-Inversi-n.git"
+  },
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/crispa2519/Oficina-Inversi-n/issues"
+  },
+  "homepage": "https://github.com/crispa2519/Oficina-Inversi-n#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.12.0",
+    "dompurify": "^3.2.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "marked": "^15.0.12",
+    "three": "^0.170.0"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true
+}
