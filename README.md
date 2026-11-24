@@ -38,8 +38,9 @@ Cada gerente arranca apenas terminan sus dos analistas. El director arranca cuan
 
 La oficina está publicada como página web: **https://claude.ai/artifact/EiiUQkrnCuS4cJnweMPmtP**. Se abre con el link, sin instalar nada.
 
-- **Modo Claude:** los agentes trabajan con la cuenta de Claude de quien abre la página (la primera vez se pide permiso). No tienen acceso a internet: razonan con lo que Claude sabe, así que hay que verificar precios y datos actuales antes de operar.
-- **Modo Simulación:** informes de ejemplo, sin costo.
+- **Claude + internet:** los agentes trabajan con la cuenta de Claude de quien abre la página y buscan datos actualizados en la web con el conector gratuito **Parallel Search**. Hay que conectarlo una vez en claude.ai → Configuración → Conectores.
+- **Claude sin internet:** razonan solo con lo que Claude ya sabe.
+- **Simulación:** informes de ejemplo, sin costo.
 
 La página se genera con `python3 artifact/build.py`, que reutiliza el código de `server/` y `public/` y escribe `artifact/oficina-3d.html`.
 
