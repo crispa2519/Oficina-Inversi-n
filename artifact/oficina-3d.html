@@ -1,0 +1,1771 @@
+<title>Oficina de Inversiones IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0b1020;
+  --panel: rgba(13, 19, 38, 0.86);
+  --panel-solid: #0f1630;
+  --line: rgba(148, 163, 184, 0.18);
+  --text: #e5e9f2;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --gold: #f5c451;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --err: #ef4444;
+  --idle: #64748b;
+  --queued: #a78bfa;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+button, input, select { font: inherit; }
+#scene { position: fixed; inset: 0; }
+
+/* ---------- Top bar ---------- */
+#topbar {
+  position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; right: 12px; z-index: 10;
+  background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--line);
+  border-radius: 14px; padding: 10px 14px 8px; display: grid; gap: 8px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(135deg, var(--gold), #b7791f); color: #1a1205; font-weight: 700; }
+.brand h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
+.brand .sub { font-size: 12px; color: var(--muted); }
+.badge { margin-left: auto; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: .6px; border: 1px solid var(--line); }
+.badge.live { background: rgba(34,197,94,.15); color: var(--ok); border-color: rgba(34,197,94,.4); }
+.badge.demo { background: rgba(245,158,11,.15); color: var(--warn); border-color: rgba(245,158,11,.4); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.controls label { display: grid; gap: 3px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.controls label.grow { flex: 1; min-width: 180px; }
+.controls label.check { display: flex; align-items: center; gap: 6px; text-transform: none; font-size: 13px; color: var(--text); padding-bottom: 8px; }
+select, input[type=text], input:not([type]) {
+  background: #0a1128; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; min-height: 34px;
+}
+button { cursor: pointer; border-radius: 8px; padding: 7px 14px; min-height: 34px; font-size: 13px; border: 1px solid var(--line); background: #15203f; color: var(--text); font-weight: 600; transition: filter .15s, opacity .15s; }
+button:hover:not(:disabled) { filter: brightness(1.2); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+button.primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); border-color: transparent; }
+button.gold { background: linear-gradient(135deg, var(--gold), #c08a1e); color: #1a1205; border-color: transparent; }
+button.ghost { background: transparent; }
+button.small { padding: 4px 10px; min-height: 28px; font-size: 12px; }
+.progress { display: flex; align-items: center; gap: 10px; }
+.progress .track { flex: 1; height: 6px; background: rgba(148,163,184,.15); border-radius: 99px; overflow: hidden; }
+#progressBar { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--ok)); transition: width .5s; }
+#progressText { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* ---------- Org chart ---------- */
+#org {
+  position: fixed; left: 12px; bottom: 12px; top: calc(200px + env(safe-area-inset-top, 0px)); width: 250px; z-index: 9; overflow: auto;
+  background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+}
+#org h2, #panel h2 { margin: 0 0 8px; font-size: 14px; }
+.org-dir, .org-sector { border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; margin-bottom: 8px; }
+.org-dir { border-color: rgba(245,196,81,.5); }
+.org-sector .sh { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+.org-sector .sh .sw { width: 10px; height: 10px; border-radius: 3px; }
+.org-sector .sh .score { flex-basis: 100%; padding-left: 16px; font-size: 11px; color: var(--gold); font-weight: 600; }
+.org-sector .sh .score:empty { display: none; }
+.org-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.org-head h2 { margin: 0 !important; }
+.org-agent { display: flex; align-items: center; gap: 7px; font-size: 12px; padding: 3px 4px; border-radius: 6px; cursor: pointer; color: #cbd5e1; }
+.org-agent:hover, .org-agent.sel { background: rgba(56,189,248,.12); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--idle); flex: none; }
+.dot.queued { background: var(--queued); }
+.dot.working { background: var(--warn); box-shadow: 0 0 8px var(--warn); animation: pulse 1s infinite; }
+.dot.done { background: var(--ok); }
+.dot.error { background: var(--err); }
+@keyframes pulse { 50% { opacity: .35; } }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--muted); margin-top: 6px; }
+.legend span { display: flex; align-items: center; gap: 4px; }
+
+/* ---------- Agent panel ---------- */
+#panel {
+  position: fixed; right: 12px; top: calc(200px + env(safe-area-inset-top, 0px)); bottom: 12px; width: min(520px, calc(100vw - 24px)); z-index: 11;
+  background: var(--panel); backdrop-filter: blur(12px); border: 1px solid var(--line); border-radius: 14px;
+  display: flex; flex-direction: column; padding: 14px; transition: transform .25s, opacity .25s;
+}
+#panel.hidden { transform: translateX(30px); opacity: 0; pointer-events: none; }
+.close { position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 16px; padding: 4px 8px; }
+.chip { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 700; color: #0b1020; }
+.muted { color: var(--muted); font-size: 13px; }
+.state { margin-top: 6px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+#pLogWrap { margin: 10px 0 4px; font-size: 12px; }
+#pLogWrap summary { cursor: pointer; color: var(--muted); }
+#pLog { list-style: none; margin: 6px 0 0; padding: 0; max-height: 120px; overflow: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #a5b4cc; }
+#pLog li { padding: 2px 0; border-bottom: 1px dashed rgba(148,163,184,.1); }
+.panel-actions { display: flex; justify-content: flex-end; margin: 4px 0 8px; }
+#pReport { flex: 1; overflow: auto; padding-right: 6px; }
+
+/* ---------- Markdown ---------- */
+.md { font-size: 13.5px; line-height: 1.55; }
+.md h1 { font-size: 19px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.md h2 { font-size: 16px; color: var(--gold); margin-top: 22px; }
+.md h3 { font-size: 14px; color: var(--accent); }
+.md table { border-collapse: collapse; width: 100%; font-size: 12px; margin: 8px 0; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; white-space: nowrap; }
+.md th { background: rgba(56,189,248,.1); }
+.md blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--warn); background: rgba(245,158,11,.08); border-radius: 0 8px 8px 0; }
+.md a { color: var(--accent); }
+.md code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: rgba(148,163,184,.12); padding: 1px 4px; border-radius: 4px; }
+
+/* ---------- Modal ---------- */
+#modal { position: fixed; inset: 0; z-index: 20; background: rgba(3,6,15,.7); display: grid; place-items: center; padding: 16px; }
+#modal.hidden { display: none; }
+.modal-box { width: min(1100px, 100%); height: 100%; background: var(--panel-solid); border: 1px solid rgba(245,196,81,.35); border-radius: 16px; display: flex; flex-direction: column; }
+.modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.modal-head h2 { margin: 0; font-size: 16px; color: var(--gold); }
+#mReport { overflow: auto; padding: 8px 24px 24px; }
+
+/* ---------- Labels 3D ---------- */
+.label3d { pointer-events: none; text-align: center; transform: translateY(-6px); }
+.label3d .n { font-size: 11px; font-weight: 600; background: rgba(10,16,32,.78); border: 1px solid var(--line); padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+.label3d .s { font-size: 10px; color: var(--muted); margin-top: 2px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.label3d.working .n { border-color: var(--warn); }
+.label3d.done .n { border-color: var(--ok); }
+.label3d.error .n { border-color: var(--err); }
+.sector3d { pointer-events: none; font-weight: 700; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; padding: 4px 12px; border-radius: 8px; color: #0b1020; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+.sector3d small { display: block; font-size: 10px; font-weight: 600; letter-spacing: .5px; opacity: .8; text-align: center; }
+
+#hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); background: rgba(10,16,32,.7); padding: 6px 12px; border-radius: 99px; z-index: 5; white-space: nowrap; }
+#toast { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 30; background: #1e293b; border: 1px solid var(--line); padding: 10px 16px; border-radius: 10px; font-size: 13px; max-width: calc(100vw - 32px); }
+#toast.hidden { display: none; }
+
+@media (max-width: 900px) {
+  #org { display: none; }
+  #panel { top: auto; height: 60vh; }
+  #hint { display: none; }
+  .brand .sub { display: none; }
+}
+
+@media print {
+  body { overflow: visible; background: #fff; color: #000; }
+  body > *:not(#modal) { display: none !important; }
+  #modal { position: static; background: none; padding: 0; display: block; }
+  .modal-box { border: none; height: auto; background: #fff; }
+  .modal-head { display: none; }
+  #mReport { overflow: visible; color: #000; }
+  .md h2 { color: #7a5a00; } .md h3 { color: #0b4f78; }
+  .md th, .md td { border-color: #bbb; white-space: normal; }
+  .md table { display: table; }
+}
+
+.note { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+select:disabled { opacity: .5; }
+@media (max-width: 900px) {
+  #topbar { max-height: 55vh; overflow: auto; }
+  .note { display: none; }
+}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+</script>
+
+<div id="scene"></div>
+
+<header id="topbar">
+  <div class="brand">
+    <div class="logo">◆</div>
+    <div>
+      <h1>Oficina de Inversiones IA</h1>
+      <span class="sub">Research multi-agente · 6 rubros · 19 agentes</span>
+    </div>
+    <span id="mode" class="badge demo">Conectando…</span>
+  </div>
+  <form id="runForm" class="controls">
+    <label>Modo
+      <select id="fMode" name="mode">
+        <option value="claude">Claude (análisis real)</option>
+        <option value="demo">Simulación (instantánea)</option>
+      </select>
+    </label>
+    <label>Profundidad
+      <select id="fTier" name="tier">
+        <option value="default" selected>Estándar</option>
+        <option value="complex">Máxima (más lento)</option>
+      </select>
+    </label>
+    <label>Perfil
+      <select id="fRisk" name="risk">
+        <option value="conservador">Conservador</option>
+        <option value="moderado" selected>Moderado</option>
+        <option value="agresivo">Agresivo</option>
+      </select>
+    </label>
+    <label>Horizonte
+      <select id="fHorizon" name="horizon">
+        <option value="corto plazo (1-6 meses)">Corto (1-6m)</option>
+        <option value="mediano plazo (6-18 meses)" selected>Mediano (6-18m)</option>
+        <option value="largo plazo (2-5 años)">Largo (2-5a)</option>
+      </select>
+    </label>
+    <label class="grow">Notas
+      <input id="fNotes" name="notes" placeholder="Ej.: capital USD 50k, evitar apalancamiento…" maxlength="500" />
+    </label>
+    <button type="submit" id="runBtn" class="primary">▶ Iniciar análisis</button>
+    <button type="button" id="stopBtn" class="ghost" disabled>■ Detener</button>
+    <button type="button" id="finalBtn" class="gold" disabled>📄 Informe del Director</button>
+  </form>
+  <div class="progress"><div class="track"><div id="progressBar"></div></div><span id="progressText">0 / 19 agentes</span></div>
+  <p id="modeNote" class="note"></p>
+</header>
+
+<aside id="org">
+  <div class="org-head"><h2>Organigrama</h2><button id="homeBtn" class="ghost small" title="Vista general">⌂ Vista general</button></div>
+  <div id="orgList"></div>
+  <div class="legend">
+    <span><i class="dot idle"></i>Inactivo</span>
+    <span><i class="dot queued"></i>En cola</span>
+    <span><i class="dot working"></i>Trabajando</span>
+    <span><i class="dot done"></i>Entregado</span>
+    <span><i class="dot error"></i>Error</span>
+  </div>
+</aside>
+
+<aside id="panel" class="hidden">
+  <button id="panelClose" class="close" aria-label="Cerrar">✕</button>
+  <div class="panel-head">
+    <span id="pSector" class="chip"></span>
+    <h2 id="pName"></h2>
+    <div id="pTitle" class="muted"></div>
+    <div id="pState" class="state"></div>
+  </div>
+  <details id="pLogWrap" open>
+    <summary>Actividad</summary>
+    <ul id="pLog"></ul>
+  </details>
+  <div class="panel-actions">
+    <button id="pCopy" class="ghost small" disabled>⧉ Copiar</button>
+    <button id="pDownload" class="ghost small" disabled>⬇ Descargar .md</button>
+  </div>
+  <article id="pReport" class="md"><p class="muted">Todavía no hay informe.</p></article>
+</aside>
+
+<div id="modal" class="hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Informe Centralizado del Director</h2>
+      <div>
+        <button id="mCopy" class="ghost small">⧉ Copiar</button>
+        <button id="mDownload" class="ghost small">⬇ Descargar .md</button>
+        <button id="mClose" class="ghost small">✕</button>
+      </div>
+    </div>
+    <article id="mReport" class="md"></article>
+  </div>
+</div>
+
+<div id="hint">Arrastrá para orbitar · rueda para zoom · clic en un agente para ver su trabajo</div>
+<div id="toast" class="hidden"></div>
+
+<script type="module">
+// Definición de la organización: 6 rubros × (analista fundamental + analista técnico + gerente) + 1 director.
+
+const SECTORS = [
+  {
+    id: 'crypto',
+    name: 'Criptomonedas',
+    color: '#f7931a',
+    universe:
+      'Bitcoin, Ethereum y altcoins de capitalización relevante (Solana, BNB, XRP, Chainlink, Avalanche, etc.), ETFs spot de cripto y acciones con exposición cripto (COIN, MSTR, mineras).',
+    fundamentalFocus: `- Tokenomics: oferta circulante vs. máxima, inflación/emisión, calendario de desbloqueos (unlocks), quema.
+- Métricas on-chain: direcciones activas, volumen de transacciones, comisiones generadas (revenue real del protocolo), TVL, flujos hacia/desde exchanges, MVRV, NUPL, actividad de holders de largo plazo.
+- Flujos institucionales: entradas/salidas de ETFs spot, tesorerías corporativas, stablecoins en circulación.
+- Desarrollo y adopción: actividad de desarrolladores, upgrades de red, nuevos casos de uso, alianzas.
+- Marco regulatorio (SEC, MiCA, etc.) y riesgo de contraparte.
+- Valuación relativa: P/F (market cap / fees), MC/TVL, comparación con pares.`,
+    technicalFocus: `- Estructura de mercado en diario y semanal: máximos/mínimos crecientes, rangos, rupturas.
+- Medias móviles 20/50/200 y la media de 200 semanas en BTC; cruces dorados/de la muerte.
+- RSI, MACD, divergencias; volumen y perfil de volumen; Bollinger.
+- Funding rates, open interest de futuros, liquidaciones, ratio long/short (posicionamiento).
+- Dominancia de BTC, ratio ETH/BTC y rotación hacia altcoins.
+- Niveles clave de soporte/resistencia y Fibonacci.`,
+  },
+  {
+    id: 'tech',
+    name: 'Tecnología',
+    color: '#3b82f6',
+    universe:
+      'Semiconductores, software/SaaS, hyperscalers y cloud, inteligencia artificial, ciberseguridad, hardware, internet y plataformas. Mercados de EE.UU. principalmente, ADRs relevantes y ETFs sectoriales (XLK, SMH, IGV).',
+    fundamentalFocus: `- Crecimiento de ingresos (YoY, aceleración/desaceleración), Regla del 40 en SaaS, net revenue retention.
+- Márgenes bruto/operativo/FCF y apalancamiento operativo; SBC (compensación en acciones) y dilución.
+- Valuación: EV/Ventas, EV/EBITDA, P/E forward, PEG, FCF yield vs. pares e histórico.
+- Ciclo de capex en IA, backlog/RPO, guías de la compañía y revisiones de estimaciones de analistas.
+- Ventajas competitivas (moat): efectos de red, costos de cambio, propiedad intelectual, escala.
+- Catalizadores: resultados próximos, lanzamientos de producto, regulación antimonopolio, export controls.`,
+    technicalFocus: `- Tendencia primaria (precio vs. SMA 50/200), fuerza relativa contra el S&P 500 y el Nasdaq 100.
+- Patrones: bases, banderas, copa con asa, rupturas con volumen, gaps post-resultados.
+- RSI, MACD, ADX, ATR para dimensionar stops.
+- Amplitud del sector (porcentaje de acciones sobre su SMA 200), rotación growth/value.
+- Niveles de soporte/resistencia, retrocesos de Fibonacci, VWAP anclado a eventos.`,
+  },
+  {
+    id: 'consumer',
+    name: 'Consumo Masivo',
+    color: '#10b981',
+    universe:
+      'Consumo básico (alimentos, bebidas, cuidado personal, hogar, supermercados, tabaco) y consumo discrecional relevante (retail, restaurantes). ETFs XLP / XLY.',
+    fundamentalFocus: `- Crecimiento orgánico separado en precio vs. volumen; poder de fijación de precios.
+- Márgenes brutos frente a costos de insumos (granos, cacao, café, envases, fletes) y estrategias de cobertura.
+- Fortaleza de marcas, participación de mercado, presión de marcas propias (private label).
+- Impacto de nuevos fármacos GLP-1 sobre volúmenes de snacks/bebidas.
+- Balance: deuda neta/EBITDA, cobertura de dividendos, historial de aumentos, recompras.
+- Valuación: P/E vs. promedio histórico de 10 años, dividend yield vs. bono del Tesoro a 10 años, EV/EBITDA.`,
+    technicalFocus: `- Comportamiento defensivo: fuerza relativa vs. S&P 500 en fases de aversión al riesgo.
+- Tendencia (SMA 50/200), rangos de acumulación de largo plazo, mínimos de varios años.
+- RSI semanal en sobreventa extrema, divergencias alcistas.
+- Soportes históricos, zonas de rendimiento por dividendo históricamente altas (soporte "por valuación").
+- Volumen en jornadas de resultados y gaps.`,
+  },
+  {
+    id: 'commodities',
+    name: 'Commodities',
+    color: '#eab308',
+    universe:
+      'Energía (petróleo WTI/Brent, gas natural), metales preciosos (oro, plata, platino), metales industriales (cobre, litio, uranio), agrícolas (soja, maíz, trigo, café, cacao). Productoras, ETFs (GLD, SLV, USO, COPX, URA) y futuros.',
+    fundamentalFocus: `- Balance oferta/demanda: inventarios (EIA, LME, USDA WASDE), producción OPEP+, capex de la industria.
+- Curva de futuros (contango/backwardation) y costo de carry.
+- Compras de bancos centrales (oro), tasas reales y dólar (DXY), demanda china.
+- Clima, geopolítica, sanciones, transición energética (cobre, litio, uranio).
+- Para productoras: costo all-in (AISC), costo de extracción, apalancamiento al precio, FCF yield, reservas.
+- Posicionamiento institucional (informe COT de la CFTC).`,
+    technicalFocus: `- Tendencia en gráficos diarios/semanales/mensuales, máximos históricos, canales.
+- Estacionalidad del commodity.
+- Ratios relativos: oro/plata, cobre/oro, petróleo/gas.
+- RSI, MACD, media de 200 días, bandas de Bollinger, ATR para volatilidad.
+- Posicionamiento extremo en COT como señal contraria.
+- Soportes/resistencias y objetivos por proyección de patrones.`,
+  },
+  {
+    id: 'health',
+    name: 'Salud',
+    color: '#ef4444',
+    universe:
+      'Farmacéuticas grandes, biotecnológicas, dispositivos médicos, aseguradoras/gestoras de salud, herramientas de ciencias de la vida, CROs. ETFs XLV, IBB, XBI.',
+    fundamentalFocus: `- Pipeline: fases clínicas, lecturas de datos próximas (catalizadores binarios), fechas PDUFA/FDA, probabilidad de éxito.
+- Precipicio de patentes (loss of exclusivity) y su impacto en ingresos.
+- Franquicias de crecimiento (obesidad/GLP-1, oncología, inmunología), M&A.
+- Riesgo regulatorio: negociación de precios de medicamentos (IRA), Medicare/Medicaid, ratios médicos (MLR) en aseguradoras.
+- Márgenes, FCF, deuda, dividendos; caja vs. burn rate en biotecnológicas.
+- Valuación: P/E forward, EV/Ventas, valor del pipeline ajustado por riesgo (rNPV) vs. pares.`,
+    technicalFocus: `- Tendencia y fuerza relativa del sector vs. mercado; rotación hacia defensivos.
+- Reacción técnica a eventos binarios (gaps, rellenos de gap).
+- Bases de acumulación tras caídas prolongadas, rupturas con volumen.
+- RSI, MACD, SMA 50/200, ATR para stops (volatilidad elevada en biotech).
+- Soportes/resistencias de largo plazo.`,
+  },
+  {
+    id: 'financial',
+    name: 'Financiero',
+    color: '#8b5cf6',
+    universe:
+      'Bancos (grandes y regionales), aseguradoras, gestoras de activos, brokers, procesadoras de pagos, fintech, bolsas de valores. ETFs XLF, KRE.',
+    fundamentalFocus: `- Margen de interés neto (NIM) y sensibilidad a la curva de tasas; crecimiento de préstamos y depósitos; costo de fondeo.
+- Calidad de cartera: morosidad, cargos netos, provisiones, exposición a real estate comercial.
+- Capital y liquidez: CET1, LCR, pruebas de estrés; capacidad de recompras y dividendos.
+- Rentabilidad: ROE, ROTE, eficiencia; ingresos por comisiones (banca de inversión, trading, gestión de activos).
+- Valuación: P/VL tangible, P/E, dividend yield vs. pares e histórico.
+- Regulación (Basilea III endgame), ciclo de crédito, escenario macro de la Fed.`,
+    technicalFocus: `- Sensibilidad a la curva de rendimientos (pendiente 2s10s) y su correlación con el precio.
+- Tendencia (SMA 50/200), rupturas de rangos plurianuales, fuerza relativa vs. S&P 500.
+- RSI, MACD, volumen, amplitud de bancos regionales (KRE) como termómetro de riesgo.
+- Niveles clave de soporte/resistencia y proyecciones de patrones.`,
+  },
+];
+
+const today = () =>
+  new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+function profileText(profile = {}) {
+  const risk = profile.risk || 'moderado';
+  const horizon = profile.horizon || 'mediano plazo (6-18 meses)';
+  const notes = profile.notes ? `\nNotas adicionales del cliente: ${profile.notes}` : '';
+  return `Perfil del cliente: riesgo ${risk}; horizonte ${horizon}.${notes}`;
+}
+
+const COMMON_RULES = `
+Reglas profesionales obligatorias:
+- No tenés acceso a internet ni a cotizaciones en tiempo real: trabajá con tu conocimiento más reciente. Indicá hasta qué fecha llega tu información y aclará que precios y niveles deben verificarse antes de operar. No inventes cifras: si no estás seguro de un dato, dalo como rango aproximado o marcalo "a verificar".
+- Expresá los niveles técnicos (entrada, stop, objetivos) también en términos relativos (% desde el precio de referencia, distancia a la SMA 200, etc.) para que sigan siendo útiles si el precio cambió.
+- Pensá como un analista sell-side/buy-side senior con 20 años de experiencia: escepticismo, rigor, foco en riesgo/retorno asimétrico.
+- Separá hechos de opiniones. Considerá el caso alcista Y el bajista.
+- Escribí en español rioplatense neutro y profesional, en Markdown, con tablas cuando aporten claridad.
+- Esto es análisis de research, no una recomendación personalizada regulada; aun así, sé concreto y accionable.`;
+
+function analystSystemPrompt(sector, kind) {
+  const isFund = kind === 'fundamental';
+  const focus = isFund ? sector.fundamentalFocus : sector.technicalFocus;
+  const role = isFund ? 'Analista Fundamental Senior' : 'Analista Técnico Senior (CMT)';
+  return `Sos el ${role} del rubro ${sector.name} en una firma de asesoramiento de inversiones de primer nivel.
+
+Universo de cobertura: ${sector.universe}
+
+Tu tarea: encontrar las MEJORES OPORTUNIDADES DE COMPRA del rubro en este momento desde el punto de vista ${isFund ? 'fundamental' : 'técnico'}.
+
+Marco de análisis que debés aplicar:
+${focus}
+${COMMON_RULES}
+
+Formato de salida (Markdown):
+# ${role} — ${sector.name}
+## Resumen ejecutivo
+(3-5 viñetas: lectura del rubro y conclusión principal)
+## Contexto del rubro
+${isFund ? '(drivers macro y sectoriales, valuación del sector vs. histórico)' : '(tendencia del sector/índice de referencia, amplitud, régimen de volatilidad)'}
+## Oportunidades de compra (3 a 5, ordenadas por convicción)
+Para cada una:
+### N. NOMBRE (TICKER)
+${
+  isFund
+    ? `- **Tesis de inversión** (por qué está mal valuada / qué no está descontando el mercado)
+- **Métricas clave** (tabla con valuación, crecimiento, márgenes, balance — con fuente y fecha)
+- **Catalizadores** y su horizonte temporal
+- **Valor intrínseco / precio objetivo** y metodología (DCF, múltiplos, SOTP…) con upside estimado
+- **Riesgos principales** y qué invalidaría la tesis
+- **Convicción**: Alta / Media / Baja`
+    : `- **Precio actual** (con fecha) y **tendencia** por marco temporal (diario/semanal)
+- **Señales técnicas** (indicadores, patrones, volumen)
+- **Zona de entrada**, **stop loss**, **objetivos 1 y 2**, **ratio riesgo/beneficio**
+- **Niveles clave** de soporte y resistencia
+- **Qué invalidaría el setup**
+- **Convicción**: Alta / Media / Baja`
+}
+## Activos a evitar / vigilar
+## Riesgos del rubro
+## Fuentes consultadas
+(fuentes de referencia y hasta qué fecha llega la información)`;
+}
+
+function analystUserPrompt(sector, kind, profile) {
+  return `Fecha de hoy: ${today()}.
+${profileText(profile)}
+
+Realizá ahora tu análisis ${kind === 'fundamental' ? 'fundamental' : 'técnico'} del rubro ${sector.name} y entregá tu informe completo con las mejores oportunidades de compra actuales.`;
+}
+
+function managerSystemPrompt(sector) {
+  return `Sos el Gerente de Research del rubro ${sector.name} en una firma de asesoramiento de inversiones de primer nivel. Supervisás a un analista fundamental y a un analista técnico.
+
+Tu tarea: recibir ambos informes, contrastarlos con espíritu crítico y producir UN informe unificado del rubro.
+- Priorizá las oportunidades donde fundamentales y técnicos CONVERGEN (buen negocio a buen precio + buen momento de entrada).
+- Señalá las divergencias (p. ej. fundamental alcista pero técnico bajista) y cómo deben tratarse (esperar confirmación, entrada escalonada, etc.).
+- Detectá inconsistencias, datos dudosos o desactualizados entre ambos informes y marcarlos.
+- Marcá qué datos críticos conviene verificar con información en tiempo real antes de ejecutar.
+- Asigná una ponderación sugerida del rubro dentro de una cartera diversificada (sobreponderar / neutral / subponderar).
+${COMMON_RULES}
+
+Formato de salida (Markdown):
+# Informe Gerencial — ${sector.name}
+## Visión del rubro
+**Recomendación sectorial:** SOBREPONDERAR | NEUTRAL | SUBPONDERAR
+**Convicción del rubro:** N/10
+(párrafo de síntesis)
+## Matriz de convergencia
+| Activo | Ticker | Visión fundamental | Visión técnica | Convergencia | Convicción |
+## Oportunidades de compra priorizadas (top 3)
+Para cada una: tesis integrada, zona de entrada, stop, objetivos, upside, horizonte, tamaño de posición sugerido (% del capital asignado al rubro), riesgos y disparadores de salida.
+## Divergencias y alertas
+## Riesgos del rubro y escenarios (base / alcista / bajista con probabilidades)
+## Calendario de catalizadores
+## Control de calidad de los informes recibidos
+(datos no verificados, contradicciones, supuestos fuertes)
+
+IMPORTANTE: la línea "**Convicción del rubro:** N/10" y la línea "**Recomendación sectorial:** ..." deben aparecer exactamente con ese formato (N es un número entero del 1 al 10).`;
+}
+
+function managerUserPrompt(sector, profile, fundamentalReport, technicalReport) {
+  return `Fecha de hoy: ${today()}.
+${profileText(profile)}
+
+<informe_fundamental>
+${fundamentalReport}
+</informe_fundamental>
+
+<informe_tecnico>
+${technicalReport}
+</informe_tecnico>
+
+Elaborá el informe gerencial unificado del rubro ${sector.name}.`;
+}
+
+function directorSystemPrompt() {
+  return `Sos el Director de Inversiones (CIO) de una firma de asesoramiento de inversiones de primer nivel. Recibís los informes unificados de los 6 gerentes de rubro: Criptomonedas, Tecnología, Consumo Masivo, Commodities, Salud y Financiero.
+
+Tu tarea: producir el INFORME CENTRALIZADO DE OPORTUNIDADES DE INVERSIÓN de la firma, del nivel que entregaría un comité de inversiones de un banco privado o family office.
+- Integrá la visión macro (tasas, inflación, dólar, crecimiento, liquidez, geopolítica) que se desprende de los informes; indicá qué indicadores macro deben confirmarse con datos actuales.
+- Rankeá las oportunidades de TODA la firma, no por rubro: elegí las mejores por relación riesgo/retorno, convergencia técnico-fundamental y calidad de la evidencia.
+- Construí una asignación de cartera modelo coherente con el perfil del cliente, con diversificación y control de correlaciones.
+- Sé exigente: descartá ideas débiles, marcá los conflictos entre rubros y los riesgos de concentración.
+${COMMON_RULES}
+
+Formato de salida (Markdown):
+# Informe del Director de Inversiones — Oportunidades de Compra
+**Fecha:** … | **Perfil:** … | **Horizonte:** …
+## 1. Resumen ejecutivo
+(5-7 viñetas con las conclusiones clave y la postura general: risk-on / neutral / risk-off)
+## 2. Contexto macro y de mercado
+## 3. Mapa sectorial
+| Rubro | Recomendación | Convicción (1-10) | Tesis en una línea | Principal riesgo |
+## 4. Top 10 oportunidades de compra de la firma
+| # | Activo | Ticker | Rubro | Tipo de tesis | Zona de entrada | Stop | Objetivo | Upside | R/B | Horizonte | Convicción |
+Luego, para las 5 de mayor convicción, una ficha breve con la tesis integrada.
+## 5. Cartera modelo sugerida
+(asignación % por rubro y por activo, liquidez/cobertura; justificación; coherencia con el perfil del cliente)
+## 6. Plan de ejecución
+(entradas escalonadas, niveles, órdenes condicionales, rebalanceo)
+## 7. Gestión de riesgos
+(escenarios con probabilidades, stress test cualitativo, correlaciones, coberturas sugeridas, riesgos de cola)
+## 8. Calendario de catalizadores (próximas 4-8 semanas)
+## 9. Ideas descartadas y por qué
+## 10. Seguimiento: qué vigilar y señales de salida
+## Aviso legal
+(este informe es research generado por agentes de IA con fines informativos; no constituye asesoramiento financiero personalizado; verificar datos antes de operar)`;
+}
+
+function directorUserPrompt(profile, managerReports) {
+  const blocks = SECTORS.map(
+    (s) => `<informe_gerente rubro="${s.name}">\n${managerReports[s.id] || '(sin informe)'}\n</informe_gerente>`,
+  ).join('\n\n');
+  return `Fecha de hoy: ${today()}.
+${profileText(profile)}
+
+${blocks}
+
+Elaborá el informe centralizado del Director de Inversiones.`;
+}
+
+// Lista plana de agentes (útil para el frontend)
+function buildRoster() {
+  const agents = [];
+  for (const s of SECTORS) {
+    agents.push({ id: `${s.id}-fundamental`, sector: s.id, role: 'fundamental', title: 'Analista Fundamental', name: `Fundamental · ${s.name}` });
+    agents.push({ id: `${s.id}-technical`, sector: s.id, role: 'technical', title: 'Analista Técnico', name: `Técnico · ${s.name}` });
+    agents.push({ id: `${s.id}-manager`, sector: s.id, role: 'manager', title: 'Gerente de Rubro', name: `Gerente · ${s.name}` });
+  }
+  agents.push({ id: 'director', sector: null, role: 'director', title: 'Director de Inversiones (CIO)', name: 'Director de Inversiones' });
+  return {
+    sectors: SECTORS.map(({ id, name, color, universe }) => ({ id, name, color, universe })),
+    agents,
+  };
+}
+
+
+// MODO DEMO: genera informes SIMULADOS para recorrer la oficina sin clave de API.
+// Ningún número de este archivo es real: los activos son ejemplos y las cifras son ilustrativas.
+
+const DEMO_ASSETS = {
+  crypto: [['Bitcoin', 'BTC'], ['Ethereum', 'ETH'], ['Solana', 'SOL'], ['Chainlink', 'LINK']],
+  tech: [['NVIDIA', 'NVDA'], ['Microsoft', 'MSFT'], ['Taiwan Semiconductor', 'TSM'], ['CrowdStrike', 'CRWD']],
+  consumer: [['Procter & Gamble', 'PG'], ['Coca-Cola', 'KO'], ['Costco', 'COST'], ['Mondelez', 'MDLZ']],
+  commodities: [['Oro (SPDR Gold)', 'GLD'], ['Cobre (Freeport-McMoRan)', 'FCX'], ['Uranio (Cameco)', 'CCJ'], ['Petróleo (Exxon Mobil)', 'XOM']],
+  health: [['Eli Lilly', 'LLY'], ['UnitedHealth', 'UNH'], ['Intuitive Surgical', 'ISRG'], ['Vertex Pharmaceuticals', 'VRTX']],
+  financial: [['JPMorgan Chase', 'JPM'], ['Visa', 'V'], ['Goldman Sachs', 'GS'], ['Interactive Brokers', 'IBKR']],
+};
+
+const DEMO_QUERIES = {
+  fundamental: ['resultados último trimestre', 'valuación múltiplos sector', 'guía anual compañía', 'revisiones estimaciones analistas', 'noticias regulatorias'],
+  technical: ['gráfico diario tendencia', 'RSI MACD semanal', 'soportes resistencias clave', 'fuerza relativa vs S&P 500', 'volumen acumulación'],
+};
+
+const BANNER = '> ⚠️ **MODO DEMO — INFORME SIMULADO.** Cifras ilustrativas, no son datos de mercado reales. Elegí el modo «Claude» para un análisis real.\n';
+
+function seeded(seed) {
+  let h = 2166136261;
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+}
+
+const sleep = (ms, signal) =>
+  new Promise((res, rej) => {
+    const t = setTimeout(res, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(t);
+      rej(new Error('aborted'));
+    });
+  });
+
+async function fakeWork(onEvent, signal, queries, rnd) {
+  for (const q of queries) {
+    await sleep(700 + rnd() * 1400, signal);
+    onEvent({ kind: 'search', query: q });
+  }
+  await sleep(900 + rnd() * 1500, signal);
+}
+
+const conv = (r) => (r > 0.66 ? 'Alta' : r > 0.33 ? 'Media' : 'Baja');
+
+async function demoAnalyst(sector, kind, profile, onEvent, signal) {
+  const rnd = seeded(sector.id + kind);
+  const assets = DEMO_ASSETS[sector.id];
+  await fakeWork(onEvent, signal, DEMO_QUERIES[kind].map((q) => `${sector.name}: ${q}`), rnd);
+  const role = kind === 'fundamental' ? 'Analista Fundamental Senior' : 'Analista Técnico Senior (CMT)';
+  const ideas = assets
+    .slice(0, 3)
+    .map(([name, tk], i) => {
+      const price = Math.round(50 + rnd() * 400);
+      if (kind === 'fundamental') {
+        const up = Math.round(12 + rnd() * 30);
+        return `### ${i + 1}. ${name} (${tk})
+- **Tesis de inversión:** calidad de negocio superior al promedio del rubro con valuación por debajo de su media histórica (ejemplo ilustrativo).
+- **Métricas clave (simuladas):**
+
+| Métrica | Valor | Media 5 años |
+|---|---|---|
+| P/E forward | ${(14 + rnd() * 20).toFixed(1)}x | ${(18 + rnd() * 15).toFixed(1)}x |
+| Crec. ingresos YoY | ${(4 + rnd() * 25).toFixed(1)}% | ${(5 + rnd() * 12).toFixed(1)}% |
+| Margen FCF | ${(10 + rnd() * 25).toFixed(1)}% | — |
+
+- **Catalizadores:** próximos resultados trimestrales, expansión de márgenes.
+- **Precio objetivo:** $${Math.round(price * (1 + up / 100))} (DCF + múltiplos) — upside ~${up}%.
+- **Riesgos:** desaceleración macro, compresión de múltiplos.
+- **Convicción:** ${conv(rnd())}`;
+      }
+      const stop = Math.round(price * (0.9 - rnd() * 0.05));
+      const t1 = Math.round(price * (1.1 + rnd() * 0.08));
+      return `### ${i + 1}. ${name} (${tk})
+- **Precio (simulado):** $${price} — tendencia diaria alcista, semanal lateral-alcista.
+- **Señales:** precio sobre SMA 50 y SMA 200, RSI(14) en ${Math.round(48 + rnd() * 15)}, MACD cruzando al alza.
+- **Entrada:** $${Math.round(price * 0.97)}–$${price} · **Stop:** $${stop} · **Objetivos:** $${t1} / $${Math.round(t1 * 1.08)} · **R/B:** ${(1.8 + rnd() * 1.5).toFixed(1)}
+- **Invalidación:** cierre diario debajo de $${stop}.
+- **Convicción:** ${conv(rnd())}`;
+    })
+    .join('\n\n');
+
+  const markdown = `${BANNER}
+# ${role} — ${sector.name}
+## Resumen ejecutivo
+- Lectura ${kind === 'fundamental' ? 'fundamental' : 'técnica'} del rubro: constructiva con selectividad (simulado).
+- Se identifican 3 oportunidades con asimetría favorable.
+- Perfil aplicado: riesgo ${profile.risk || 'moderado'}, horizonte ${profile.horizon || 'mediano plazo'}.
+## Oportunidades de compra
+${ideas}
+## Activos a vigilar
+- ${assets[3][0]} (${assets[3][1]}): esperar mejor punto de entrada.
+## Riesgos del rubro
+- Volatilidad macro, cambios regulatorios, sorpresas en resultados.
+## Fuentes consultadas
+- (Modo demo: sin fuentes reales)`;
+  return { markdown, usage: null };
+}
+
+async function demoManager(sector, profile, onEvent, signal) {
+  const rnd = seeded(sector.id + 'mgr');
+  await fakeWork(onEvent, signal, [`${sector.name}: verificación de datos críticos`], rnd);
+  const c = 4 + Math.floor(rnd() * 6);
+  const rec = c >= 7 ? 'SOBREPONDERAR' : c >= 5 ? 'NEUTRAL' : 'SUBPONDERAR';
+  const assets = DEMO_ASSETS[sector.id];
+  const markdown = `${BANNER}
+# Informe Gerencial — ${sector.name}
+## Visión del rubro
+**Recomendación sectorial:** ${rec}
+**Convicción del rubro:** ${c}/10
+
+Fundamentales y técnicos coinciden parcialmente; se priorizan los activos con convergencia (simulado).
+## Matriz de convergencia
+| Activo | Ticker | Visión fundamental | Visión técnica | Convergencia | Convicción |
+|---|---|---|---|---|---|
+${assets
+  .slice(0, 3)
+  .map(([n, t]) => `| ${n} | ${t} | Alcista | ${rnd() > 0.4 ? 'Alcista' : 'Neutral'} | ${rnd() > 0.4 ? 'Alta' : 'Media'} | ${conv(rnd())} |`)
+  .join('\n')}
+## Oportunidades priorizadas (top 3)
+${assets
+  .slice(0, 3)
+  .map(([n, t], i) => `${i + 1}. **${n} (${t})** — entrada escalonada en 2 tramos; tamaño sugerido ${Math.round(20 + rnd() * 20)}% del capital del rubro.`)
+  .join('\n')}
+## Divergencias y alertas
+- ${assets[3][0]}: fundamental positivo pero técnico débil → esperar confirmación.
+## Escenarios
+| Escenario | Prob. | Impacto |
+|---|---|---|
+| Base | 55% | Retornos moderados |
+| Alcista | 25% | Expansión de múltiplos |
+| Bajista | 20% | Corrección del rubro |`;
+  return { markdown, usage: null };
+}
+
+async function demoDirector(profile, managerReports, onEvent, signal) {
+  const rnd = seeded('director');
+  await fakeWork(onEvent, signal, ['contexto macro: tasas Fed', 'inflación y dólar', 'liquidez global'], rnd);
+  const rows = [];
+  let i = 1;
+  for (const s of SECTORS) {
+    for (const [n, t] of DEMO_ASSETS[s.id].slice(0, 2)) {
+      if (rows.length >= 10) break;
+      rows.push(`| ${i++} | ${n} | ${t} | ${s.name} | Convergente | Escalonada | -8% | +${Math.round(15 + rnd() * 25)}% | +${Math.round(15 + rnd() * 25)}% | ${(1.8 + rnd() * 1.4).toFixed(1)} | 6-12m | ${conv(rnd())} |`);
+    }
+  }
+  const sectorRows = SECTORS.map((s) => {
+    const md = managerReports[s.id] || '';
+    const c = md.match(/Convicci[oó]n del rubro:\**\s*(\d+)/i)?.[1] ?? '—';
+    const r = md.match(/Recomendaci[oó]n sectorial:\**\s*(\w+)/i)?.[1] ?? '—';
+    return `| ${s.name} | ${r} | ${c} | Tesis simulada del rubro | Riesgo simulado |`;
+  }).join('\n');
+  const markdown = `${BANNER}
+# Informe del Director de Inversiones — Oportunidades de Compra
+**Fecha:** ${new Date().toLocaleDateString('es-AR')} | **Perfil:** ${profile.risk || 'moderado'} | **Horizonte:** ${profile.horizon || 'mediano plazo'}
+## 1. Resumen ejecutivo
+- Postura general: **neutral con sesgo constructivo** (simulado).
+- Se priorizan activos con convergencia técnico-fundamental.
+- Diversificación entre rubros defensivos y de crecimiento.
+## 2. Contexto macro y de mercado
+Escenario ilustrativo: inflación en descenso gradual, tasas estables, dólar lateral.
+## 3. Mapa sectorial
+| Rubro | Recomendación | Convicción (1-10) | Tesis en una línea | Principal riesgo |
+|---|---|---|---|---|
+${sectorRows}
+## 4. Top 10 oportunidades de compra de la firma
+| # | Activo | Ticker | Rubro | Tipo de tesis | Zona de entrada | Stop | Objetivo | Upside | R/B | Horizonte | Convicción |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+${rows.join('\n')}
+## 5. Cartera modelo sugerida
+| Rubro | Peso |
+|---|---|
+| Tecnología | 22% |
+| Salud | 16% |
+| Financiero | 15% |
+| Consumo Masivo | 14% |
+| Commodities | 13% |
+| Criptomonedas | 5% |
+| Liquidez / coberturas | 15% |
+## 6. Plan de ejecución
+Entradas en 3 tramos, rebalanceo mensual.
+## 7. Gestión de riesgos
+Stops por ATR, límite de 6% por posición individual.
+## Aviso legal
+Informe SIMULADO generado en modo demo. No constituye asesoramiento financiero.`;
+  return { markdown, usage: null };
+}
+
+
+// =====================================================================
+//  Orquestación en el navegador (versión web publicada en claude.ai)
+//  Cada agente es una llamada a Claude con la cuenta de quien abre la página.
+// =====================================================================
+const CONCURRENCY = 2; // la plataforma atiende pocas llamadas a la vez por persona
+
+function limiter(n) {
+  let active = 0;
+  const queue = [];
+  const next = () => {
+    if (active >= n || !queue.length) return;
+    active++;
+    const { fn, resolve, reject } = queue.shift();
+    fn().then(resolve, reject).finally(() => { active--; next(); });
+  };
+  return (fn) => new Promise((resolve, reject) => { queue.push({ fn, resolve, reject }); next(); });
+}
+
+function parseManagerSummary(md) {
+  const conv = md.match(/Convicci[oó]n del rubro:\**\s*(\d{1,2})\s*\/\s*10/i);
+  const rec = md.match(/Recomendaci[oó]n sectorial:\**\s*(SOBREPONDERAR|NEUTRAL|SUBPONDERAR)/i);
+  return { conviction: conv ? Math.min(10, Number(conv[1])) : null, recommendation: rec ? rec[1].toUpperCase() : null };
+}
+
+const SAMPLE_ERRORS = {
+  rate_limited: 'Claude está recibiendo demasiados pedidos o llegaste a tu límite de uso. Probá de nuevo en un rato.',
+  refused: 'Claude no quiso responder este pedido.',
+  empty_completion: 'Claude no devolvió texto.',
+  prompt_too_large: 'El pedido es demasiado largo.',
+  session_expired: 'Tu sesión expiró: volvé a iniciar sesión en claude.ai.',
+  upstream_error: 'Falló la conexión con Claude. Probá de nuevo.',
+};
+
+class FatalError extends Error {}
+
+async function callClaude(sample, prompt, { tier, signal, onEvent }) {
+  let last = 0;
+  try {
+    const { text, truncated } = await sample(prompt, {
+      modelTier: tier,
+      signal,
+      cache: false,
+      onText: ({ text }) => {
+        if (Date.now() - last < 1500) return;
+        last = Date.now();
+        onEvent({ kind: 'text', chars: text.length });
+      },
+    });
+    if (truncated) onEvent({ kind: 'info', message: 'El informe se cortó por límite de extensión.' });
+    return { markdown: text.trim(), usage: null };
+  } catch (e) {
+    const code = e?.code;
+    if (code === 'cancelled') throw new FatalError('Análisis detenido.');
+    if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(code)) {
+      throw new FatalError('No se dio permiso para usar Claude desde esta página. Podés usar el modo Simulación.');
+    }
+    throw new Error(SAMPLE_ERRORS[code] || SAMPLE_ERRORS.upstream_error);
+  }
+}
+
+async function runOfficeInBrowser({ profile, demo, tier, sample, emit, signal }) {
+  const status = (agentId, st, message = '') => emit({ type: 'status', agentId, state: st, message });
+  const limit = limiter(demo ? 4 : CONCURRENCY);
+
+  async function execute(agentId, prompt, demoFn, agentTier) {
+    if (signal.aborted) throw new FatalError('Análisis detenido.');
+    status(agentId, 'working', 'Analizando…');
+    try {
+      const onEvent = (e) => emit({ type: 'activity', agentId, ...e });
+      const result = demo ? await demoFn(onEvent, signal) : await callClaude(sample, prompt, { tier: agentTier, signal, onEvent });
+      emit({ type: 'report', agentId, markdown: result.markdown, usage: null });
+      status(agentId, 'done', 'Informe entregado');
+      return result.markdown;
+    } catch (err) {
+      if (err instanceof FatalError || signal.aborted) {
+        status(agentId, 'error', err.message);
+        throw err instanceof FatalError ? err : new FatalError('Análisis detenido.');
+      }
+      status(agentId, 'error', err.message);
+      const fallback = `# Informe no disponible\n\nEl agente \`${agentId}\` falló: ${err.message}`;
+      emit({ type: 'report', agentId, markdown: fallback, usage: null });
+      return fallback;
+    }
+  }
+
+  const managerReports = {};
+  await Promise.all(
+    SECTORS.map(async (sector) => {
+      const [fund, tech] = await Promise.all(
+        ['fundamental', 'technical'].map((kind) => {
+          const id = `${sector.id}-${kind}`;
+          status(id, 'queued', 'En espera');
+          return limit(() =>
+            execute(
+              id,
+              analystSystemPrompt(sector, kind) + '\n\n---\n\n' + analystUserPrompt(sector, kind, profile),
+              (onEv, sig) => demoAnalyst(sector, kind, profile, onEv, sig),
+              tier,
+            ),
+          );
+        }),
+      );
+      emit({ type: 'handoff', from: [`${sector.id}-fundamental`, `${sector.id}-technical`], to: `${sector.id}-manager` });
+      status(`${sector.id}-manager`, 'queued', 'Esperando turno');
+      const md = await limit(() =>
+        execute(
+          `${sector.id}-manager`,
+          managerSystemPrompt(sector) + '\n\n---\n\n' + managerUserPrompt(sector, profile, fund, tech),
+          (onEv, sig) => demoManager(sector, profile, onEv, sig),
+          tier,
+        ),
+      );
+      managerReports[sector.id] = md;
+      emit({ type: 'sector-summary', sector: sector.id, ...parseManagerSummary(md) });
+    }),
+  );
+
+  emit({ type: 'handoff', from: SECTORS.map((s) => `${s.id}-manager`), to: 'director' });
+  await execute(
+    'director',
+    directorSystemPrompt() + '\n\n---\n\n' + directorUserPrompt(profile, managerReports),
+    (onEv, sig) => demoDirector(profile, managerReports, onEv, sig),
+    'complex',
+  );
+  emit({ type: 'complete', file: `informe-director-${new Date().toISOString().slice(0, 10)}.md`, demo });
+}
+
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// =====================================================================
+//  Estado
+// =====================================================================
+const state = {
+  roster: null,
+  agents: new Map(), // id -> { def, state, message, log:[], report, mesh refs }
+  sectors: new Map(),
+  selected: null,
+  running: false,
+  finalReport: null,
+  finalFile: null,
+  demo: false,
+};
+const $ = (s) => document.querySelector(s);
+const STATE_COLORS = { idle: 0x64748b, queued: 0xa78bfa, working: 0xf59e0b, done: 0x22c55e, error: 0xef4444 };
+const STATE_LABEL = { idle: 'Inactivo', queued: 'En cola', working: 'Trabajando', done: 'Informe entregado', error: 'Error' };
+const ROLE_SHIRT = { fundamental: 0x1e3a8a, technical: 0x065f46, manager: 0x1f2937, director: 0x111111 };
+
+// =====================================================================
+//  Escena
+// =====================================================================
+const container = $('#scene');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+container.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+Object.assign(labelRenderer.domElement.style, { position: 'absolute', top: '0', pointerEvents: 'none' });
+container.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1020);
+scene.fog = new THREE.Fog(0x0b1020, 60, 120);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 400);
+const HOME = { pos: new THREE.Vector3(0, 36, 52), target: new THREE.Vector3(0, 0, 2) };
+camera.position.copy(HOME.pos);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.47;
+controls.minDistance = 8;
+controls.maxDistance = 95;
+controls.target.copy(HOME.target);
+
+scene.add(new THREE.HemisphereLight(0xbfd7ff, 0x1a1f2e, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(25, 45, 20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 120 });
+scene.add(sun);
+
+// Piso y paredes
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(48, 96),
+  new THREE.MeshStandardMaterial({ color: 0x1b2236, roughness: 0.85, metalness: 0.05 }),
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+const grid = new THREE.PolarGridHelper(48, 12, 8, 96, 0x26304a, 0x222a40);
+grid.position.y = 0.01;
+scene.add(grid);
+const wall = new THREE.Mesh(
+  new THREE.CylinderGeometry(48, 48, 7, 96, 1, true),
+  new THREE.MeshStandardMaterial({ color: 0x131a2e, side: THREE.BackSide, roughness: 0.9 }),
+);
+wall.position.y = 3.5;
+scene.add(wall);
+// Franja de luz en la pared
+const strip = new THREE.Mesh(new THREE.TorusGeometry(47.8, 0.06, 6, 160), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+strip.rotation.x = Math.PI / 2;
+strip.position.y = 6.2;
+scene.add(strip);
+
+// =====================================================================
+//  Utilidades de construcción
+// =====================================================================
+const mats = {
+  desk: new THREE.MeshStandardMaterial({ color: 0xd7c8ae, roughness: 0.6 }),
+  deskDark: new THREE.MeshStandardMaterial({ color: 0x2a2f3a, roughness: 0.5, metalness: 0.4 }),
+  metal: new THREE.MeshStandardMaterial({ color: 0x9aa3b2, roughness: 0.35, metalness: 0.8 }),
+  chair: new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.7 }),
+  skin: [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 })),
+  hair: [0x1f1309, 0x3b2314, 0x6b4423, 0x111111, 0x9c7a4b].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 })),
+  pot: new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.6 }),
+  leaf: new THREE.MeshStandardMaterial({ color: 0x2f7d4a, roughness: 0.8, flatShading: true }),
+  glass: new THREE.MeshPhysicalMaterial({ color: 0x9cc7ff, transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0.1, side: THREE.DoubleSide }),
+};
+
+function shadowed(mesh) {
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeDesk(w = 3.2, d = 1.6, executive = false) {
+  const g = new THREE.Group();
+  const top = shadowed(new THREE.Mesh(new RoundedBoxGeometry(w, 0.12, d, 2, 0.04), executive ? mats.deskDark : mats.desk));
+  top.position.y = 1.05;
+  g.add(top);
+  if (executive) {
+    const front = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w * 0.96, 1.0, 0.08), mats.deskDark));
+    front.position.set(0, 0.52, d / 2 - 0.1);
+    g.add(front);
+  }
+  for (const sx of [-1, 1]) {
+    const leg = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, d * 0.9), mats.metal));
+    leg.position.set(sx * (w / 2 - 0.15), 0.5, 0);
+    g.add(leg);
+  }
+  return g;
+}
+
+// Pantallas con textura de canvas animada
+const screens = [];
+function makeScreen(kind, color, w = 1.3, h = 0.8) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 160;
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const g = new THREE.Group();
+  const frame = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.05), mats.deskDark));
+  g.add(frame);
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  panel.position.z = 0.03;
+  g.add(panel);
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4), mats.metal);
+  stand.position.y = -h / 2 - 0.2;
+  g.add(stand);
+  const s = { canvas, ctx: canvas.getContext('2d'), tex, kind, color, active: false, seed: Math.random() * 1000, data: null };
+  drawScreen(s, 0);
+  screens.push(s);
+  return { group: g, screen: s };
+}
+
+function drawScreen(s, t) {
+  const { ctx, canvas } = s;
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = s.active ? '#07101f' : '#0a0f1a';
+  ctx.fillRect(0, 0, W, H);
+  const col = s.color;
+  if (!s.active && !s.done) {
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('◆', W / 2 - 8, H / 2 + 6);
+    s.tex.needsUpdate = true;
+    return;
+  }
+  ctx.strokeStyle = 'rgba(148,163,184,.12)';
+  for (let y = 20; y < H; y += 28) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const shift = s.active ? Math.floor(t * 4) : 0;
+  if (s.kind === 'technical') {
+    // velas
+    let p = 80;
+    for (let i = 0; i < 26; i++) {
+      const r = Math.sin((i + shift + s.seed) * 1.7) * 0.5 + Math.sin((i + shift) * 0.37 + s.seed) * 0.8;
+      const o = p, c = p - r * 9;
+      const hi = Math.min(o, c) - 6, lo = Math.max(o, c) + 6;
+      const x = 8 + i * 9.4;
+      ctx.strokeStyle = ctx.fillStyle = c < o ? '#22c55e' : '#ef4444';
+      ctx.beginPath(); ctx.moveTo(x + 3, hi); ctx.lineTo(x + 3, lo); ctx.stroke();
+      ctx.fillRect(x, Math.min(o, c), 6, Math.max(2, Math.abs(c - o)));
+      p = Math.max(30, Math.min(135, c));
+    }
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i < 26; i++) { const y = 80 + Math.sin((i + shift) * 0.25 + s.seed) * 22; i ? ctx.lineTo(11 + i * 9.4, y) : ctx.moveTo(11, y); }
+    ctx.stroke(); ctx.lineWidth = 1;
+  } else if (s.kind === 'fundamental') {
+    for (let i = 0; i < 8; i++) {
+      const v = 30 + Math.abs(Math.sin(i * 1.3 + s.seed + shift * 0.15)) * 90;
+      ctx.fillStyle = i % 2 ? col : '#38bdf8';
+      ctx.fillRect(14 + i * 29, H - 14 - v, 18, v);
+    }
+    ctx.fillStyle = '#cbd5e1'; ctx.font = '11px monospace';
+    ctx.fillText('P/E  EV/EBITDA  FCF', 10, 14);
+  } else {
+    // dashboard del gerente / director
+    ctx.fillStyle = col; ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(s.kind === 'director' ? 'COMITÉ DE INVERSIÓN' : 'SÍNTESIS DEL RUBRO', 10, 18);
+    for (let i = 0; i < 5; i++) {
+      const w = 40 + Math.abs(Math.sin(i * 2.1 + s.seed + shift * 0.1)) * 170;
+      ctx.fillStyle = 'rgba(148,163,184,.25)'; ctx.fillRect(10, 32 + i * 24, 230, 12);
+      ctx.fillStyle = i === 0 ? '#22c55e' : i === 4 ? '#ef4444' : col; ctx.fillRect(10, 32 + i * 24, w, 12);
+    }
+  }
+  if (s.done && !s.active) {
+    ctx.fillStyle = 'rgba(34,197,94,.9)'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('✔ ENTREGADO', W - 112, H - 10);
+  }
+  s.tex.needsUpdate = true;
+}
+
+function makeChair() {
+  const g = new THREE.Group();
+  const seat = shadowed(new THREE.Mesh(new RoundedBoxGeometry(0.8, 0.12, 0.8, 2, 0.04), mats.chair));
+  seat.position.y = 0.65;
+  const back = shadowed(new THREE.Mesh(new RoundedBoxGeometry(0.8, 0.9, 0.1, 2, 0.04), mats.chair));
+  back.position.set(0, 1.15, 0.38);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.55), mats.metal);
+  post.position.y = 0.32;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.05, 5), mats.metal);
+  base.position.y = 0.05;
+  g.add(seat, back, post, base);
+  return g;
+}
+
+function makePerson(shirtColor, accentColor, seed = 0, scale = 1) {
+  const g = new THREE.Group();
+  const shirt = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.6 });
+  const body = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.33, 0.55, 6, 14), shirt));
+  body.position.y = 1.25;
+  const tie = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.4, 0.02), new THREE.MeshStandardMaterial({ color: accentColor, emissive: accentColor, emissiveIntensity: 0.25 }));
+  tie.position.set(0, 1.38, -0.33);
+  const head = new THREE.Group();
+  head.position.y = 2.02;
+  const skull = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 16), mats.skin[seed % mats.skin.length]));
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.285, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), mats.hair[(seed * 3) % mats.hair.length]);
+  hair.position.y = 0.02;
+  hair.rotation.x = 0.25;
+  head.add(skull, hair);
+  const arms = [];
+  for (const sx of [-1, 1]) {
+    const arm = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.5, 4, 8), shirt));
+    arm.position.set(sx * 0.42, 1.3, -0.25);
+    arm.rotation.x = -1.1;
+    arms.push(arm);
+    g.add(arm);
+  }
+  g.add(body, tie, head);
+  g.scale.setScalar(scale);
+  return { group: g, head, arms };
+}
+
+function makePlant(x, z, s = 1) {
+  const g = new THREE.Group();
+  const pot = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.3, 0.7, 14), mats.pot));
+  pot.position.y = 0.35;
+  g.add(pot);
+  for (let i = 0; i < 4; i++) {
+    const leaf = shadowed(new THREE.Mesh(new THREE.IcosahedronGeometry(0.45 - i * 0.05, 0), mats.leaf));
+    leaf.position.set(Math.sin(i * 2) * 0.2, 1.0 + i * 0.35, Math.cos(i * 2) * 0.2);
+    g.add(leaf);
+  }
+  g.position.set(x, 0, z);
+  g.scale.setScalar(s);
+  scene.add(g);
+}
+
+function statusRing() {
+  const m = new THREE.MeshBasicMaterial({ color: STATE_COLORS.idle, transparent: true, opacity: 0.85 });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 40), m);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.03;
+  return ring;
+}
+
+function label(text, sub = '') {
+  const div = document.createElement('div');
+  div.className = 'label3d';
+  div.innerHTML = `<div class="n"></div><div class="s"></div>`;
+  div.querySelector('.n').textContent = text;
+  div.querySelector('.s').textContent = sub;
+  return { obj: new CSS2DObject(div), div };
+}
+
+// =====================================================================
+//  Construcción de la oficina
+// =====================================================================
+const pickables = [];
+const POD_RADIUS = 24;
+const sectorBars = new Map();
+
+function placeAgent(def, worldPos, faceTarget, kind, color, opts = {}) {
+  const root = new THREE.Group();
+  root.position.copy(worldPos);
+  root.lookAt(faceTarget.x, 0, faceTarget.z);
+  root.rotateY(Math.PI); // los modelos miran a -Z; dejamos el escritorio delante, hacia el objetivo
+  scene.add(root);
+
+  // escritorio adelante (hacia -Z local)
+  const desk = makeDesk(opts.deskW ?? 3.0, opts.deskD ?? 1.5, opts.executive);
+  desk.position.z = -1.2;
+  root.add(desk);
+  const screenCount = opts.screens ?? 2;
+  const scr = [];
+  for (let i = 0; i < screenCount; i++) {
+    const { group, screen } = makeScreen(kind, color, opts.screenW ?? 1.15, opts.screenH ?? 0.72);
+    const off = (i - (screenCount - 1) / 2) * ((opts.screenW ?? 1.15) + 0.1);
+    group.position.set(off, 1.1 + 0.4 + (opts.screenH ?? 0.72) / 2, -1.6);
+    group.rotation.y = -off * 0.25; // panel hacia la persona
+    root.add(group);
+    scr.push(screen);
+  }
+  const chair = makeChair();
+  chair.rotation.y = 0;
+  root.add(chair);
+  const seed = [...def.id].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const person = makePerson(ROLE_SHIRT[def.role], color, seed, opts.scale ?? 1);
+  person.group.position.set(0, -0.15, 0.05);
+  root.add(person.group);
+  const ring = statusRing();
+  ring.scale.setScalar(opts.scale ?? 1);
+  root.add(ring);
+
+  // Hitbox invisible para clics
+  const hit = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.6, 10), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 1.3;
+  hit.userData.agentId = def.id;
+  root.add(hit);
+  pickables.push(hit);
+
+  const { obj, div } = label(def.name.split(' · ')[0], STATE_LABEL.idle);
+  obj.position.set(0, 2.9 * (opts.scale ?? 1), 0);
+  root.add(obj);
+
+  // punto luminoso para animación de "pensando"
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshBasicMaterial({ color: STATE_COLORS.working }));
+  bulb.position.set(0, 2.55 * (opts.scale ?? 1), 0);
+  bulb.visible = false;
+  root.add(bulb);
+
+  const a = state.agents.get(def.id);
+  Object.assign(a, { root, person, ring, screens: scr, labelDiv: div, bulb, anchor: new THREE.Vector3() });
+  root.updateMatrixWorld(true);
+  a.anchor.setFromMatrixPosition(person.head.matrixWorld);
+}
+
+function buildOffice(roster) {
+  const center = new THREE.Vector3(0, 0, 0);
+  roster.sectors.forEach((sector, i) => {
+    const ang = (i / roster.sectors.length) * Math.PI * 2 - Math.PI / 2;
+    const dir = new THREE.Vector3(Math.cos(ang), 0, Math.sin(ang));
+    const podCenter = dir.clone().multiplyScalar(POD_RADIUS);
+    const color = new THREE.Color(sector.color);
+    const side = new THREE.Vector3(-dir.z, 0, dir.x);
+
+    // alfombra del rubro
+    const rug = new THREE.Mesh(
+      new THREE.CircleGeometry(7.2, 6),
+      new THREE.MeshStandardMaterial({ color: color.clone().multiplyScalar(0.35), roughness: 0.95 }),
+    );
+    rug.rotation.x = -Math.PI / 2;
+    rug.rotation.z = -ang;
+    rug.position.set(podCenter.x, 0.02, podCenter.z);
+    rug.receiveShadow = true;
+    scene.add(rug);
+    const edge = new THREE.Mesh(new THREE.RingGeometry(7.05, 7.25, 6), new THREE.MeshBasicMaterial({ color }));
+    edge.rotation.copy(rug.rotation);
+    edge.position.set(podCenter.x, 0.03, podCenter.z);
+    scene.add(edge);
+
+    // Cartel del rubro
+    const sign = document.createElement('div');
+    sign.className = 'sector3d';
+    sign.style.background = sector.color;
+    sign.innerHTML = `${sector.name}<small>Mesa de research</small>`;
+    const signObj = new CSS2DObject(sign);
+    const signPos = dir.clone().multiplyScalar(POD_RADIUS + 6.5);
+    signObj.position.set(signPos.x, 5.6, signPos.z);
+    scene.add(signObj);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 5), mats.metal);
+    post.position.set(signPos.x, 2.5, signPos.z);
+    scene.add(post);
+
+    // Analistas (atrás) y gerente (adelante, más cerca del director)
+    const fundPos = podCenter.clone().add(side.clone().multiplyScalar(-3.2)).add(dir.clone().multiplyScalar(2.6));
+    const techPos = podCenter.clone().add(side.clone().multiplyScalar(3.2)).add(dir.clone().multiplyScalar(2.6));
+    const mgrPos = podCenter.clone().add(dir.clone().multiplyScalar(-3.4));
+    const fundDef = state.agents.get(`${sector.id}-fundamental`).def;
+    const techDef = state.agents.get(`${sector.id}-technical`).def;
+    const mgrDef = state.agents.get(`${sector.id}-manager`).def;
+    // analistas miran hacia afuera (escritorio contra el exterior), gerente mira al centro
+    placeAgent(fundDef, fundPos, fundPos.clone().add(dir), 'fundamental', sector.color);
+    placeAgent(techDef, techPos, techPos.clone().add(dir), 'technical', sector.color);
+    placeAgent(mgrDef, mgrPos, center, 'manager', sector.color, { executive: true, deskW: 3.4, screens: 1, screenW: 1.6, screenH: 0.9, scale: 1.05 });
+
+    makePlant(podCenter.x + side.x * 6, podCenter.z + side.z * 6, 0.9);
+    makePlant(podCenter.x - side.x * 6, podCenter.z - side.z * 6, 0.9);
+
+    // Barra de convicción alrededor del director
+    const barPos = dir.clone().multiplyScalar(9.2);
+    const bar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 1, 0.7),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6, transparent: true, opacity: 0.85 }),
+    );
+    bar.position.set(barPos.x, 0.05, barPos.z);
+    bar.scale.y = 0.1;
+    scene.add(bar);
+    const bdiv = document.createElement('div');
+    bdiv.className = 'label3d';
+    bdiv.innerHTML = `<div class="n" style="border-color:${sector.color}">—</div>`;
+    const bl = new CSS2DObject(bdiv);
+    bl.position.set(barPos.x, 1, barPos.z);
+    scene.add(bl);
+    sectorBars.set(sector.id, { bar, label: bl, div: bdiv, target: 0.1 });
+  });
+
+  // Plataforma del director
+  const plat = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(7, 7.4, 0.5, 64), mats.deskDark));
+  plat.position.y = 0.25;
+  scene.add(plat);
+  const platRing = new THREE.Mesh(new THREE.TorusGeometry(7.05, 0.05, 6, 100), new THREE.MeshBasicMaterial({ color: 0xf5c451 }));
+  platRing.rotation.x = Math.PI / 2;
+  platRing.position.y = 0.52;
+  scene.add(platRing);
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(6.8, 6.8, 3.2, 64, 1, true, 0.5, Math.PI * 2 - 1), mats.glass);
+  glass.position.y = 2.1;
+  scene.add(glass);
+
+  const dirDef = state.agents.get('director').def;
+  placeAgent(dirDef, new THREE.Vector3(0, 0.5, -1.2), new THREE.Vector3(0, 0, 30), 'director', '#f5c451', {
+    executive: true, deskW: 4.2, deskD: 1.9, screens: 3, screenW: 1.25, screenH: 0.8, scale: 1.12,
+  });
+
+  // Holograma central
+  const holo = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.9, 1),
+    new THREE.MeshBasicMaterial({ color: 0xf5c451, wireframe: true, transparent: true, opacity: 0.7 }),
+  );
+  holo.position.set(0, 5.2, 0);
+  holo.name = 'holo';
+  scene.add(holo);
+
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    makePlant(Math.cos(a) * 42, Math.sin(a) * 42, 1.3);
+  }
+}
+
+// =====================================================================
+//  Paquetes de información (handoffs)
+// =====================================================================
+const packets = [];
+function sendPacket(fromId, toId, color = 0x38bdf8) {
+  const a = state.agents.get(fromId), b = state.agents.get(toId);
+  if (!a?.root || !b?.root) return;
+  const p0 = a.anchor.clone().add(new THREE.Vector3(0, 0.6, 0));
+  const p2 = b.anchor.clone().add(new THREE.Vector3(0, 0.6, 0));
+  const mid = p0.clone().lerp(p2, 0.5);
+  mid.y += 4 + p0.distanceTo(p2) * 0.15;
+  const curve = new THREE.QuadraticBezierCurve3(p0, mid, p2);
+  const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), new THREE.MeshBasicMaterial({ color }));
+  const trailGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(40));
+  const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 }));
+  scene.add(mesh, trail);
+  packets.push({ curve, mesh, trail, t: 0, speed: 0.35 + Math.random() * 0.1 });
+}
+
+// =====================================================================
+//  UI: organigrama y panel
+// =====================================================================
+function buildOrg(roster) {
+  const list = $('#orgList');
+  list.innerHTML = '';
+  const dir = document.createElement('div');
+  dir.className = 'org-dir';
+  dir.appendChild(orgRow('director', '★ Director de Inversiones'));
+  list.appendChild(dir);
+  for (const s of roster.sectors) {
+    const box = document.createElement('div');
+    box.className = 'org-sector';
+    const h = document.createElement('div');
+    h.className = 'sh';
+    h.innerHTML = `<span class="sw" style="background:${s.color}"></span><span></span><span class="score" id="score-${s.id}"></span>`;
+    h.children[1].textContent = s.name;
+    box.appendChild(h);
+    box.appendChild(orgRow(`${s.id}-manager`, 'Gerente'));
+    box.appendChild(orgRow(`${s.id}-fundamental`, 'Analista Fundamental'));
+    box.appendChild(orgRow(`${s.id}-technical`, 'Analista Técnico'));
+    list.appendChild(box);
+  }
+}
+function orgRow(id, text) {
+  const row = document.createElement('div');
+  row.className = 'org-agent';
+  row.dataset.id = id;
+  row.innerHTML = `<i class="dot idle"></i><span></span>`;
+  row.children[1].textContent = text;
+  row.onclick = () => selectAgent(id, true);
+  return row;
+}
+
+function renderMarkdown(el, md) {
+  el.innerHTML = DOMPurify.sanitize(marked.parse(md || ''));
+  el.querySelectorAll('a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
+}
+
+function selectAgent(id, focus = false) {
+  state.selected = id;
+  document.querySelectorAll('.org-agent').forEach((r) => r.classList.toggle('sel', r.dataset.id === id));
+  const a = state.agents.get(id);
+  const sector = a.def.sector ? state.sectors.get(a.def.sector) : null;
+  $('#panel').classList.remove('hidden');
+  const chip = $('#pSector');
+  chip.textContent = sector ? sector.name : 'Dirección';
+  chip.style.background = sector ? sector.color : '#f5c451';
+  $('#pName').textContent = a.def.name;
+  $('#pTitle').textContent = a.def.title;
+  refreshPanel();
+  if (focus && a.root) focusOn(a.anchor);
+}
+
+function refreshPanel() {
+  const id = state.selected;
+  if (!id) return;
+  const a = state.agents.get(id);
+  $('#pState').innerHTML = `<i class="dot ${a.state}"></i><span></span>`;
+  $('#pState span').textContent = `${STATE_LABEL[a.state]}${a.message && a.state !== 'done' ? ' — ' + a.message : ''}`;
+  const log = $('#pLog');
+  log.innerHTML = '';
+  for (const l of a.log.slice(-60)) {
+    const li = document.createElement('li');
+    li.textContent = l;
+    log.appendChild(li);
+  }
+  log.scrollTop = log.scrollHeight;
+  if (a.report) {
+    if (a._rendered !== a.report) { renderMarkdown($('#pReport'), a.report); a._rendered = a.report; }
+  } else {
+    $('#pReport').innerHTML = `<p class="muted">${a.state === 'working' ? 'Trabajando en el informe…' : 'Todavía no hay informe.'}</p>`;
+    a._rendered = null;
+  }
+  $('#pDownload').disabled = !a.report;
+  $('#pCopy').disabled = !a.report;
+}
+
+let downloadsApi = null;
+let sampleApi = null;
+let runCtl = null;
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Informe copiado al portapapeles.');
+  } catch {
+    toast('No se pudo copiar automáticamente: seleccioná el texto del informe y copialo.');
+  }
+}
+async function download(name, text) {
+  if (!downloadsApi) return copyText(text);
+  try {
+    await downloadsApi.save({ filename: name, data: text });
+  } catch (e) {
+    if (e?.code !== 'declined') toast('No se pudo descargar el archivo. Usá el botón Copiar.');
+  }
+}
+
+$('#panelClose').onclick = () => { $('#panel').classList.add('hidden'); state.selected = null; document.querySelectorAll('.org-agent').forEach((r) => r.classList.remove('sel')); };
+$('#pDownload').onclick = () => { const a = state.agents.get(state.selected); if (a?.report) download(`${a.def.id}.md`, a.report); };
+$('#finalBtn').onclick = openFinal;
+$('#mClose').onclick = () => $('#modal').classList.add('hidden');
+$('#modal').onclick = (e) => { if (e.target.id === 'modal') $('#modal').classList.add('hidden'); };
+$('#mCopy').onclick = () => state.finalReport && copyText(state.finalReport);
+$('#pCopy').onclick = () => { const a = state.agents.get(state.selected); if (a?.report) copyText(a.report); };
+$('#mDownload').onclick = () => state.finalReport && download(state.finalFile || 'informe-director.md', state.finalReport);
+function openFinal() {
+  if (!state.finalReport) return;
+  renderMarkdown($('#mReport'), state.finalReport);
+  $('#modal').classList.remove('hidden');
+}
+
+function toast(msg, ms = 4000) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.add('hidden'), ms);
+}
+
+// =====================================================================
+//  Cámara
+// =====================================================================
+let camTween = null;
+function focusOn(target) {
+  const to = target.clone();
+  const offset = camera.position.clone().sub(controls.target).normalize().multiplyScalar(14);
+  offset.y = Math.max(offset.y, 6);
+  camTween = { fromT: controls.target.clone(), toT: to, fromP: camera.position.clone(), toP: to.clone().add(offset), k: 0 };
+}
+
+function goHome() {
+  camTween = { fromT: controls.target.clone(), toT: HOME.target.clone(), fromP: camera.position.clone(), toP: HOME.pos.clone(), k: 0 };
+}
+$('#homeBtn').onclick = goHome;
+addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#modal').classList.add('hidden'); } });
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  if (hit) selectAgent(hit.object.userData.agentId, true);
+});
+renderer.domElement.addEventListener('pointermove', (e) => {
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  renderer.domElement.style.cursor = raycaster.intersectObjects(pickables, false).length ? 'pointer' : 'grab';
+});
+
+// =====================================================================
+//  Estado de agentes
+// =====================================================================
+function setAgentState(id, st, message = '') {
+  const a = state.agents.get(id);
+  if (!a) return;
+  a.state = st;
+  a.message = message;
+  if (a.ring) a.ring.material.color.setHex(STATE_COLORS[st]);
+  if (a.labelDiv) {
+    a.labelDiv.className = `label3d ${st}`;
+    a.labelDiv.querySelector('.s').textContent = STATE_LABEL[st];
+  }
+  for (const s of a.screens || []) { s.active = st === 'working'; s.done = st === 'done'; drawScreen(s, 0); }
+  if (a.bulb) a.bulb.visible = st === 'working';
+  const row = document.querySelector(`.org-agent[data-id="${id}"] .dot`);
+  if (row) row.className = `dot ${st}`;
+  updateProgress();
+  if (state.selected === id) refreshPanel();
+}
+
+function updateProgress() {
+  const total = state.agents.size;
+  const done = [...state.agents.values()].filter((a) => a.state === 'done' || a.state === 'error').length;
+  $('#progressBar').style.width = `${(done / total) * 100}%`;
+  $('#progressText').textContent = `${done} / ${total} agentes`;
+}
+
+function resetAll() {
+  for (const [id, a] of state.agents) { a.log = []; a.report = null; setAgentState(id, 'idle'); }
+  for (const [sid, b] of sectorBars) { b.target = 0.1; b.div.firstElementChild.textContent = '—'; const el = $(`#score-${sid}`); if (el) el.textContent = ''; }
+  state.finalReport = null;
+  $('#finalBtn').disabled = true;
+}
+
+function setRunning(r) {
+  state.running = r;
+  $('#runBtn').disabled = r;
+  $('#stopBtn').disabled = !r;
+}
+
+// =====================================================================
+//  Eventos del servidor (SSE)
+// =====================================================================
+function handleEvent(e) {
+  switch (e.type) {
+    case 'hello':
+      setRunning(e.running);
+      break;
+    case 'start':
+      resetAll();
+      state.demo = e.demo;
+      setRunning(true);
+      if (!e.replay) toast(e.demo ? 'Simulación iniciada (informes de ejemplo).' : 'Análisis iniciado. Si Claude te pide permiso, aceptalo para que los agentes puedan trabajar.', 7000);
+      break;
+    case 'status':
+      setAgentState(e.agentId, e.state, e.message);
+      if (e.state === 'error') state.agents.get(e.agentId)?.log.push(`✖ ${e.message}`);
+      break;
+    case 'activity': {
+      const a = state.agents.get(e.agentId);
+      if (!a) break;
+      if (e.kind === 'search') a.log.push(`🔎 ${e.query}`);
+      else if (e.kind === 'info') a.log.push(`ℹ ${e.message}`);
+      else if (e.kind === 'text') a.log.push(`✍ redactando… (${e.chars.toLocaleString('es-AR')} caracteres)`);
+      if (e.kind === 'search') {
+        a.message = `Buscando: ${e.query}`;
+        if (a.labelDiv) a.labelDiv.querySelector('.s').textContent = `🔎 ${e.query}`;
+      }
+      if (state.selected === e.agentId) refreshPanel();
+      break;
+    }
+    case 'report': {
+      const a = state.agents.get(e.agentId);
+      if (!a) break;
+      a.report = e.markdown;
+      if (e.usage) a.log.push(`Σ ${e.usage.searches} búsquedas · ${e.usage.input_tokens.toLocaleString('es-AR')} tokens entrada · ${e.usage.output_tokens.toLocaleString('es-AR')} salida`);
+      if (e.agentId === 'director') { state.finalReport = e.markdown; $('#finalBtn').disabled = false; }
+      if (state.selected === e.agentId) refreshPanel();
+      break;
+    }
+    case 'handoff':
+      if (!e.replay) {
+        const color = e.to === 'director' ? 0xf5c451 : 0x38bdf8;
+        e.from.forEach((f, i) => setTimeout(() => sendPacket(f, e.to, color), i * 180));
+      }
+      break;
+    case 'sector-summary': {
+      const b = sectorBars.get(e.sector);
+      if (b && e.conviction) {
+        b.target = e.conviction * 0.6;
+        b.div.firstElementChild.textContent = `${e.conviction}/10${e.recommendation ? ' · ' + e.recommendation.slice(0, 5) + '.' : ''}`;
+      }
+      const el = $(`#score-${e.sector}`);
+      if (el && e.conviction) el.textContent = `Convicción ${e.conviction}/10 · ${e.recommendation ?? ''}`;
+      break;
+    }
+    case 'complete':
+      setRunning(false);
+      state.finalFile = e.file;
+      if (!e.replay) { toast('✅ El Director entregó el informe centralizado.', 6000); openFinal(); saveLastRun(); }
+      break;
+    case 'fatal':
+      setRunning(false);
+      if (!e.replay) toast(`⚠ ${e.message}`, 7000);
+      break;
+  }
+}
+
+const STORE_KEY = 'oficina-inversiones:ultima-corrida';
+function saveLastRun() {
+  try {
+    const reports = {};
+    for (const [id, a] of state.agents) if (a.report) reports[id] = { report: a.report, state: a.state };
+    localStorage.setItem(STORE_KEY, JSON.stringify({ at: Date.now(), demo: state.demo, reports, finalReport: state.finalReport, finalFile: state.finalFile }));
+  } catch { /* sin almacenamiento: no pasa nada */ }
+}
+function restoreLastRun() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch { saved = null; }
+  if (!saved?.reports) return;
+  for (const [id, r] of Object.entries(saved.reports)) {
+    const a = state.agents.get(id);
+    if (!a) continue;
+    a.report = r.report;
+    setAgentState(id, r.state === 'error' ? 'error' : 'done');
+  }
+  for (const s of SECTORS) {
+    const md = saved.reports[`${s.id}-manager`]?.report;
+    if (md) handleEvent({ type: 'sector-summary', sector: s.id, ...parseManagerSummary(md) });
+  }
+  if (saved.finalReport) {
+    state.finalReport = saved.finalReport;
+    state.finalFile = saved.finalFile;
+    $('#finalBtn').disabled = false;
+  }
+  const when = new Date(saved.at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+  toast(`Se cargó tu última corrida (${when}${saved.demo ? ', simulación' : ''}).`, 5000);
+}
+
+function updateModeNote() {
+  const demo = $('#fMode').value === 'demo';
+  $('#fTier').disabled = demo;
+  $('#modeNote').textContent = demo
+    ? 'Simulación: informes de ejemplo con cifras ficticias, para recorrer la oficina sin consumir uso de Claude.'
+    : 'Los agentes trabajan con tu cuenta de Claude (la primera vez te pide permiso) y razonan con lo que Claude sabe, sin acceso a internet: verificá precios y datos actuales antes de operar. Una corrida completa tarda varios minutos.';
+}
+$('#fMode').onchange = updateModeNote;
+
+async function setupCapabilities() {
+  const use = (name) => (window.claude?.use ? window.claude.use(name).catch(() => null) : Promise.resolve(null));
+  [sampleApi, downloadsApi] = await Promise.all([use('sample'), use('downloads')]);
+  const badge = $('#mode');
+  if (sampleApi) {
+    badge.textContent = 'CLAUDE · TU CUENTA';
+    badge.className = 'badge live';
+  } else {
+    badge.textContent = 'SOLO SIMULACIÓN';
+    badge.className = 'badge demo';
+    $('#fMode').value = 'demo';
+    $('#fMode').querySelector('option[value="claude"]').disabled = true;
+  }
+  updateModeNote();
+}
+
+$('#runForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  if (state.running) return;
+  const demo = $('#fMode').value === 'demo' || !sampleApi;
+  const profile = { risk: $('#fRisk').value, horizon: $('#fHorizon').value, notes: $('#fNotes').value.slice(0, 500) };
+  runCtl = new AbortController();
+  handleEvent({ type: 'start', demo, profile });
+  try {
+    await runOfficeInBrowser({ profile, demo, tier: $('#fTier').value, sample: sampleApi, emit: handleEvent, signal: runCtl.signal });
+  } catch (e) {
+    handleEvent({ type: 'fatal', message: e?.message || String(e) });
+    saveLastRun();
+  }
+};
+$('#stopBtn').onclick = () => runCtl?.abort();
+
+// =====================================================================
+//  Bucle de animación
+// =====================================================================
+const clock = new THREE.Clock();
+let screenTimer = 0;
+function animate() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  if (camTween) {
+    camTween.k = Math.min(1, camTween.k + dt * 1.5);
+    const k = 1 - Math.pow(1 - camTween.k, 3);
+    controls.target.lerpVectors(camTween.fromT, camTween.toT, k);
+    camera.position.lerpVectors(camTween.fromP, camTween.toP, k);
+    if (camTween.k >= 1) camTween = null;
+  }
+  controls.update();
+
+  for (const a of state.agents.values()) {
+    if (!a.person) continue;
+    const working = a.state === 'working';
+    const ph = a.def.id.length;
+    a.person.head.rotation.x = working ? Math.sin(t * 3 + ph) * 0.08 - 0.1 : Math.sin(t * 0.6 + ph) * 0.04;
+    a.person.head.rotation.y = working ? Math.sin(t * 1.3 + ph) * 0.25 : Math.sin(t * 0.4 + ph) * 0.15;
+    a.person.arms.forEach((arm, i) => { arm.rotation.x = -1.1 + (working ? Math.sin(t * 14 + i * Math.PI) * 0.12 : 0); });
+    if (a.bulb?.visible) { a.bulb.position.y = 2.55 + Math.sin(t * 4) * 0.12; a.bulb.material.color.setHSL(0.1, 1, 0.5 + Math.sin(t * 6) * 0.2); }
+    if (a.ring && a.state === 'working') a.ring.material.opacity = 0.55 + Math.sin(t * 5) * 0.3;
+    else if (a.ring) a.ring.material.opacity = 0.85;
+  }
+
+  screenTimer += dt;
+  if (screenTimer > 0.25) {
+    screenTimer = 0;
+    for (const s of screens) if (s.active) drawScreen(s, t);
+  }
+
+  for (const b of sectorBars.values()) {
+    b.bar.scale.y += (b.target - b.bar.scale.y) * Math.min(1, dt * 2);
+    b.bar.position.y = 0.5 + b.bar.scale.y / 2;
+    b.label.position.y = 0.9 + b.bar.scale.y + 0.4;
+  }
+
+  for (let i = packets.length - 1; i >= 0; i--) {
+    const p = packets[i];
+    p.t += dt * p.speed;
+    if (p.t >= 1) {
+      scene.remove(p.mesh, p.trail);
+      p.mesh.geometry.dispose(); p.trail.geometry.dispose();
+      packets.splice(i, 1);
+      continue;
+    }
+    p.mesh.position.copy(p.curve.getPoint(p.t));
+    p.mesh.rotation.y += dt * 6;
+    p.trail.material.opacity = 0.35 * (1 - p.t);
+  }
+
+  const holo = scene.getObjectByName('holo');
+  if (holo) {
+    holo.rotation.y += dt * 0.6;
+    holo.rotation.x += dt * 0.2;
+    const dirState = state.agents.get('director')?.state;
+    holo.material.color.setHex(dirState === 'done' ? 0x22c55e : dirState === 'working' ? 0xf59e0b : 0xf5c451);
+  }
+  strip.material.color.setHSL(0.55 + Math.sin(t * 0.2) * 0.05, 0.9, 0.55);
+
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+});
+
+// =====================================================================
+//  Inicio
+// =====================================================================
+(async function init() {
+  const roster = buildRoster();
+  state.roster = roster;
+  for (const s of roster.sectors) state.sectors.set(s.id, s);
+  for (const def of roster.agents) state.agents.set(def.id, { def, state: 'idle', message: '', log: [], report: null });
+  updateModeNote();
+  buildOrg(roster);
+  buildOffice(roster);
+  updateProgress();
+  animate();
+  restoreLastRun();
+  setupCapabilities();
+})();
+
+</script>

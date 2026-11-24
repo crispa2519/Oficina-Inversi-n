@@ -34,7 +34,16 @@ Cada gerente arranca apenas terminan sus dos analistas. El director arranca cuan
 - Si hacés clic en un agente (o en el organigrama), se abre un panel con su actividad (búsquedas web) y su informe completo, que podés descargar en `.md`.
 - El **Informe del Director** se abre al terminar y se puede descargar en `.md` o imprimir como PDF.
 
-## Uso
+## Forma más fácil: abrirla en claude.ai
+
+La oficina está publicada como página web: **https://claude.ai/artifact/EiiUQkrnCuS4cJnweMPmtP**. Se abre con el link, sin instalar nada.
+
+- **Modo Claude:** los agentes trabajan con la cuenta de Claude de quien abre la página (la primera vez se pide permiso). No tienen acceso a internet: razonan con lo que Claude sabe, así que hay que verificar precios y datos actuales antes de operar.
+- **Modo Simulación:** informes de ejemplo, sin costo.
+
+La página se genera con `python3 artifact/build.py`, que reutiliza el código de `server/` y `public/` y escribe `artifact/oficina-3d.html`.
+
+## Uso con servidor propio (análisis con búsqueda web)
 
 ```bash
 npm install

@@ -1,0 +1,117 @@
+<title>Oficina de Inversiones IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+/*{{STYLE}}*/
+</style>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+</script>
+
+<div id="scene"></div>
+
+<header id="topbar">
+  <div class="brand">
+    <div class="logo">◆</div>
+    <div>
+      <h1>Oficina de Inversiones IA</h1>
+      <span class="sub">Research multi-agente · 6 rubros · 19 agentes</span>
+    </div>
+    <span id="mode" class="badge demo">Conectando…</span>
+  </div>
+  <form id="runForm" class="controls">
+    <label>Modo
+      <select id="fMode" name="mode">
+        <option value="claude">Claude (análisis real)</option>
+        <option value="demo">Simulación (instantánea)</option>
+      </select>
+    </label>
+    <label>Profundidad
+      <select id="fTier" name="tier">
+        <option value="default" selected>Estándar</option>
+        <option value="complex">Máxima (más lento)</option>
+      </select>
+    </label>
+    <label>Perfil
+      <select id="fRisk" name="risk">
+        <option value="conservador">Conservador</option>
+        <option value="moderado" selected>Moderado</option>
+        <option value="agresivo">Agresivo</option>
+      </select>
+    </label>
+    <label>Horizonte
+      <select id="fHorizon" name="horizon">
+        <option value="corto plazo (1-6 meses)">Corto (1-6m)</option>
+        <option value="mediano plazo (6-18 meses)" selected>Mediano (6-18m)</option>
+        <option value="largo plazo (2-5 años)">Largo (2-5a)</option>
+      </select>
+    </label>
+    <label class="grow">Notas
+      <input id="fNotes" name="notes" placeholder="Ej.: capital USD 50k, evitar apalancamiento…" maxlength="500" />
+    </label>
+    <button type="submit" id="runBtn" class="primary">▶ Iniciar análisis</button>
+    <button type="button" id="stopBtn" class="ghost" disabled>■ Detener</button>
+    <button type="button" id="finalBtn" class="gold" disabled>📄 Informe del Director</button>
+  </form>
+  <div class="progress"><div class="track"><div id="progressBar"></div></div><span id="progressText">0 / 19 agentes</span></div>
+  <p id="modeNote" class="note"></p>
+</header>
+
+<aside id="org">
+  <div class="org-head"><h2>Organigrama</h2><button id="homeBtn" class="ghost small" title="Vista general">⌂ Vista general</button></div>
+  <div id="orgList"></div>
+  <div class="legend">
+    <span><i class="dot idle"></i>Inactivo</span>
+    <span><i class="dot queued"></i>En cola</span>
+    <span><i class="dot working"></i>Trabajando</span>
+    <span><i class="dot done"></i>Entregado</span>
+    <span><i class="dot error"></i>Error</span>
+  </div>
+</aside>
+
+<aside id="panel" class="hidden">
+  <button id="panelClose" class="close" aria-label="Cerrar">✕</button>
+  <div class="panel-head">
+    <span id="pSector" class="chip"></span>
+    <h2 id="pName"></h2>
+    <div id="pTitle" class="muted"></div>
+    <div id="pState" class="state"></div>
+  </div>
+  <details id="pLogWrap" open>
+    <summary>Actividad</summary>
+    <ul id="pLog"></ul>
+  </details>
+  <div class="panel-actions">
+    <button id="pCopy" class="ghost small" disabled>⧉ Copiar</button>
+    <button id="pDownload" class="ghost small" disabled>⬇ Descargar .md</button>
+  </div>
+  <article id="pReport" class="md"><p class="muted">Todavía no hay informe.</p></article>
+</aside>
+
+<div id="modal" class="hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Informe Centralizado del Director</h2>
+      <div>
+        <button id="mCopy" class="ghost small">⧉ Copiar</button>
+        <button id="mDownload" class="ghost small">⬇ Descargar .md</button>
+        <button id="mClose" class="ghost small">✕</button>
+      </div>
+    </div>
+    <article id="mReport" class="md"></article>
+  </div>
+</div>
+
+<div id="hint">Arrastrá para orbitar · rueda para zoom · clic en un agente para ver su trabajo</div>
+<div id="toast" class="hidden"></div>
+
+<script type="module">
+/*{{SCRIPT}}*/
+</script>
